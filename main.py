@@ -1,3 +1,16 @@
+from flask import Flask
+import threading
+
+app = Flask(_name_)
+
+@app.route('/')
+def home():
+    return "✅ Bot is alive!", 200
+
+def run_flask():
+    app.run(host="0.0.0.0", port=8080)
+
+threading.Thread(target=run_flask).start()
 import sqlite3
 import asyncio
 import os
