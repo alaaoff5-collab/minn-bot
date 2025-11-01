@@ -1,3 +1,8 @@
+import urllib3
+try:
+    from urllib3.contrib import appengine
+except ImportError:
+    pass  # تجاهل إذا لم يكن موجودًا
 import sqlite3
 import asyncio
 from telethon import TelegramClient
