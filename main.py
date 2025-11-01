@@ -12,11 +12,11 @@ from telegram.ext import (
 )
 
 # --------------------------
-bot_token = "8440318160:AAF5HYHb0iwIe6HFHMk3ykqabrOpJdA7K28" 
+BOT_TOKEN = "8440318160:AAF5HYHb0iwIe6HFHMk3ykqabrOpJdA7K28" 
 # بيانات حسابك الشخصي للتواصل مع البوت الثاني
 API_ID= 26299944
 API_HASH = "9adcc1a849ef755bef568475adebee77"
-bot2_username = "@tg_acccobot"
+BOT2_USERNAME = "@tg_acccobot"
 # --------------------------
 
 # قاعدة البيانات
