@@ -8,7 +8,7 @@ def home():
     return "✅ Bot is alive!", 200
 
 def run_flask():
-    app.run(host="0.0.0.0", port=8080)
+    app.run(host="0.0.0.0", port=8000)
 
 threading.Thread(target=run_flask).start()
 import sqlite3
