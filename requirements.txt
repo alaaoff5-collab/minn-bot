@@ -1,4 +1,4 @@
 telethon==1.36.0
 python-telegram-bot==20.3
 urllib3==1.26.16
-flask
+flask==3.0.3
