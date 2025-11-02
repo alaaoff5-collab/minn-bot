@@ -25,7 +25,7 @@ from telegram.ext import (
 )
 
 # --------------------------
-BOT_TOKEN = "8440318160:AAF5HYHb0iwIe6HFHMk3ykqabrOpJdA7K28" 
+BOT_TOKEN = "8568901833:AAFwLqjWCc0PgukvGBUsmt65ccWdxbl2DsU" 
 # بيانات حسابك الشخصي للتواصل مع البوت الثاني
 API_ID= 26299944
 API_HASH = "9adcc1a849ef755bef568475adebee77"
