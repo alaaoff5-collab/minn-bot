@@ -17,7 +17,7 @@ from telegram.ext import (
 # بوت الفحص (Flask)
 #--------------------------
 
-app = Flask(_name_)
+app = Flask(__name__)
 
 @app.route('/')
 def home():
@@ -120,5 +120,5 @@ async def main():
 
     conn.close()
 
-if _name_ == "_main_":
+if __name__ == "__main__":
     asyncio.run(main())
