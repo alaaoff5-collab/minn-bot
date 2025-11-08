@@ -1,19 +1,14 @@
-from flask import Flask, request
+from flask import Flask
 import threading
 import sqlite3
 import asyncio
 from telethon import TelegramClient
 from telethon.sessions import StringSession
 from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
-from telegram.ext import (
-    ApplicationBuilder,
-    ContextTypes,
-    MessageHandler,
-    filters,
-)
+from telegram.ext import ApplicationBuilder, MessageHandler, filters, ContextTypes
 
 # --------------------------
-# CONFIG (ضع التوكن مباشرة هنا)
+# CONFIG
 # --------------------------
 BOT_TOKEN = "8534393339:AAHJS-Q3rXD8M97n2dbeuoVBPCFTuygb3DE"
 API_ID = 26299944
@@ -70,7 +65,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if "balance" in lower_text or "رصيد" in lower_text:
         balance = get_balance(chat_id)
-        await update.message.reply_text(f"رصيدك الحالي: {balance / 2}")  # نصف الرصيد
+        await update.message.reply_text(f"رصيدك الحالي: {balance / 2}")
         return
 
     if "withdraw" in lower_text or "سحب" in lower_text:
@@ -124,14 +119,8 @@ async def main():
     # تشغيل Flask في Thread
     threading.Thread(target=lambda: app.run(host="0.0.0.0", port=8000)).start()
 
-    # ضبط Webhook
-    await application.bot.set_webhook(f"{PUBLIC_URL}/{BOT_TOKEN}")
-
-    await application.initialize()
-    await application.start()
-    await application.updater.start_polling()
-    await application.updater.idle()
-
+    # تشغيل Polling
+    await application.run_polling()
     conn.close()
 
 if _name_ == "_main_":
