@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, request
 import threading
 import sqlite3
 import asyncio
@@ -13,32 +13,19 @@ from telegram.ext import (
     filters,
 )
 
-#--------------------------
-# بوت الفحص (Flask)
-#--------------------------
-
-app = Flask(__name__)
-
-@app.route('/')
-def home():
-    return "✅ Bot is alive!", 200
-
-def run_flask():
-    app.run(host="0.0.0.0", port=8000)
-
-threading.Thread(target=run_flask).start()
-
-#--------------------------
+# --------------------------
 # CONFIG
-#--------------------------
-BOT_TOKEN = "8534393339:AAHJS-Q3rXD8M97n2dbeuoVBPCFTuygb3DE"
-API_ID= 26299944
-API_HASH = "9adcc1a849ef755bef568475adebee77"
-BOT2_USERNAME = "@tg_acccobot"
+# --------------------------
+BOT_TOKEN = os.getenv("BOT_TOKEN")  # ضع توكن البوت في Environment Variables
+API_ID = int(os.getenv("API_ID"))
+API_HASH = os.getenv("API_HASH")
+BOT2_USERNAME = os.getenv("BOT2_USERNAME")  # مثال: "@tg_acccobot"
+PUBLIC_URL = os.getenv("PUBLIC_URL")        # مثال: "https://valuable-dorey-almais-13b4707c.koyeb.app"
+SESSION = os.getenv("SESSION")             # سلسلة جلسة Telethon
 
-#--------------------------
+# --------------------------
 # DATABASE
-#--------------------------
+# --------------------------
 conn = sqlite3.connect("user_balances.db", check_same_thread=False)
 cursor = conn.cursor()
 cursor.execute(
@@ -57,30 +44,50 @@ def update_balance(chat_id, amount):
     cursor.execute("UPDATE balances SET balance = balance + ? WHERE chat_id=?", (amount, chat_id))
     conn.commit()
 
-#--------------------------
+# --------------------------
 # TELETHON CLIENT
-#--------------------------
-session_string = os.getenv("SESSION", "")
-if session_string:
-    client = TelegramClient(StringSession(session_string), API_ID, API_HASH)
+# --------------------------
+if SESSION:
+    client = TelegramClient(StringSession(SESSION), API_ID, API_HASH)
 else:
     client = TelegramClient("session", API_ID, API_HASH)
 
-#--------------------------
+# --------------------------
+# FLASK
+# --------------------------
+app = Flask(_name_)
+
+@app.route('/')
+def home():
+    return "✅ Bot is alive!", 200
+
+# --------------------------
 # MESSAGE HANDLER
-#--------------------------
+# --------------------------
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
     chat_id = update.message.chat_id
-    lower_text = text.lower()
+    lower_text = text.lower() if text else ""
 
     if "balance" in lower_text or "رصيد" in lower_text:
         balance = get_balance(chat_id)
-        await update.message.reply_text(f"Your current balance is: {balance}")
+        await update.message.reply_text(f"رصيدك الحالي: {balance / 2}")  # نصف الرصيد
         return
 
+    if "withdraw" in lower_text or "سحب" in lower_text:
+        balance = get_balance(chat_id)
+        if balance <= 0:
+            await update.message.reply_text("رصيدك غير كافٍ للسحب.")
+            return
+        await update.message.reply_text("ادخل المبلغ الذي تريد سحبه:")
+
+    # إرسال الرسالة للبوت الثاني عبر Telethon
     async def send_to_bot2():
         await client.connect()
+        if not await client.is_user_authorized():
+            print("⚠ Telethon غير مصرح. تحتاج إلى إدخال كود التحقق مرة واحدة محليًا.")
+            return
+
         await client.send_message(BOT2_USERNAME, text)
         await asyncio.sleep(1.5)
         response = await client.get_messages(BOT2_USERNAME, limit=1)
@@ -89,13 +96,15 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             reply_msg = response[0]
             reply = reply_msg.text or ""
 
+            # تحديث الرصيد بنصف القيمة
             if "+" in reply:
                 try:
-                    amount = float(reply.split("+")[1].split()[0])
+                    amount = float(reply.split("+")[1].split()[0]) / 2
                     update_balance(chat_id, amount)
                 except:
                     pass
 
+            # التعامل مع الأزرار
             buttons = []
             if reply_msg.reply_markup and reply_msg.reply_markup.rows:
                 for row in reply_msg.reply_markup.rows:
@@ -104,21 +113,42 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             markup = InlineKeyboardMarkup(buttons) if buttons else None
             await update.message.reply_text(reply, reply_markup=markup)
 
-    asyncio.create_task(send_to_bot2())
+    await send_to_bot2()
 
-#--------------------------
+# --------------------------
+# FLASK WEBHOOK
+# --------------------------
+@app.route(f'/{BOT_TOKEN}', methods=['POST'])
+def webhook():
+    import json
+    update = Update.de_json(json.loads(request.data), bot)
+    asyncio.run(handle_update(update))
+    return "OK"
+
+# --------------------------
 # MAIN RUN
-#--------------------------
+# --------------------------
 async def main():
+    global bot
     await client.start()
     print("✅ Telethon Client Running...")
 
     application = ApplicationBuilder().token(BOT_TOKEN).build()
+    bot = application.bot  # لاستخدامه في Flask webhook
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-    
-    await application.run_polling()
+
+    # ضبط Webhook للبوت
+    await application.bot.set_webhook(f"{PUBLIC_URL}/{BOT_TOKEN}")
+
+    # تشغيل Flask في Thread
+    threading.Thread(target=lambda: app.run(host="0.0.0.0", port=8000)).start()
+
+    await application.initialize()
+    await application.start()
+    await application.updater.start_polling()
+    await application.updater.idle()
 
     conn.close()
 
-if __name__ == "__main__":
+if _name_ == "_main_":
     asyncio.run(main())
