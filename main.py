@@ -49,7 +49,7 @@ else:
 # --------------------------
 # FLASK
 # --------------------------
-app = Flask(_name_)
+app = Flask(__name__)
 
 @app.route('/')
 def home():
@@ -135,5 +135,5 @@ async def main():
     await application.run_polling()
     conn.close()
 
-if _name_ == "_main_":
+if __name__ == "__main__":
     asyncio.run(main())
