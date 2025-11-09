@@ -1,12 +1,12 @@
-from flask import Flask
+import os
 import threading
 import sqlite3
 import asyncio
+from flask import Flask
 from telethon import TelegramClient
 from telethon.sessions import StringSession
 from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import ApplicationBuilder, MessageHandler, filters, ContextTypes
-import os  # لإحضار البورت من البيئة
 
 # --------------------------
 # CONFIG
@@ -15,7 +15,6 @@ BOT_TOKEN = "8534393339:AAHJS-Q3rXD8M97n2dbeuoVBPCFTuygb3DE"
 API_ID = 26299944
 API_HASH = "9adcc1a849ef755bef568475adebee77"
 BOT2_USERNAME = "@tg_acccobot"
-PUBLIC_URL = "https://valuable-dorey-almais-13b4707c.koyeb.app"
 SESSION_STRING = ""  # ضع هنا StringSession إذا كنت تستخدم Telethon
 
 # --------------------------
@@ -60,52 +59,61 @@ def home():
 # MESSAGE HANDLER
 # --------------------------
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    text = update.message.text
-    chat_id = update.message.chat_id
-    lower_text = text.lower() if text else ""
+    try:
+        text = update.message.text
+        chat_id = update.message.chat_id
+        lower_text = text.lower() if text else ""
 
-    if "balance" in lower_text or "رصيد" in lower_text:
-        balance = get_balance(chat_id)
-        await update.message.reply_text(f"رصيدك الحالي: {balance / 2}")
-        return
+        print(f"📩 Received message from {chat_id}: {text}")
 
-    if "withdraw" in lower_text or "سحب" in lower_text:
-        balance = get_balance(chat_id)
-        if balance <= 0:
-            await update.message.reply_text("رصيدك غير كافٍ للسحب.")
-            return
-        await update.message.reply_text("ادخل المبلغ الذي تريد سحبه:")
-
-    async def send_to_bot2():
-        await client.connect()
-        if not await client.is_user_authorized():
-            print("⚠ Telethon غير مصرح. تحتاج إلى إدخال كود التحقق مرة واحدة محليًا.")
+        if "balance" in lower_text or "رصيد" in lower_text:
+            balance = get_balance(chat_id)
+            await update.message.reply_text(f"رصيدك الحالي: {balance / 2}")
             return
 
-        await client.send_message(BOT2_USERNAME, text)
-        await asyncio.sleep(1.5)
-        response = await client.get_messages(BOT2_USERNAME, limit=1)
+        if "withdraw" in lower_text or "سحب" in lower_text:
+            balance = get_balance(chat_id)
+            if balance <= 0:
+                await update.message.reply_text("رصيدك غير كافٍ للسحب.")
+                return
+            await update.message.reply_text("ادخل المبلغ الذي تريد سحبه:")
 
-        if response:
-            reply_msg = response[0]
-            reply = reply_msg.text or ""
+        async def send_to_bot2():
+            try:
+                await client.connect()
+                if not await client.is_user_authorized():
+                    print("⚠ Telethon غير مصرح. تحتاج إدخال كود التحقق مرة واحدة محليًا.")
+                    return
 
-            if "+" in reply:
-                try:
-                    amount = float(reply.split("+")[1].split()[0]) / 2
-                    update_balance(chat_id, amount)
-                except:
-                    pass
+                await client.send_message(BOT2_USERNAME, text)
+                await asyncio.sleep(1.5)
+                response = await client.get_messages(BOT2_USERNAME, limit=1)
 
-            buttons = []
-            if reply_msg.reply_markup and reply_msg.reply_markup.rows:
-                for row in reply_msg.reply_markup.rows:
-                    buttons.append([InlineKeyboardButton(btn.text, callback_data=btn.text) for btn in row.buttons])
+                if response:
+                    reply_msg = response[0]
+                    reply = reply_msg.text or ""
 
-            markup = InlineKeyboardMarkup(buttons) if buttons else None
-            await update.message.reply_text(reply, reply_markup=markup)
+                    if "+" in reply:
+                        try:
+                            amount = float(reply.split("+")[1].split()[0]) / 2
+                            update_balance(chat_id, amount)
+                        except:
+                            pass
 
-    await send_to_bot2()
+                    buttons = []
+                    if reply_msg.reply_markup and reply_msg.reply_markup.rows:
+                        for row in reply_msg.reply_markup.rows:
+                            buttons.append([InlineKeyboardButton(btn.text, callback_data=btn.text) for btn in row.buttons])
+
+                    markup = InlineKeyboardMarkup(buttons) if buttons else None
+                    await update.message.reply_text(reply, reply_markup=markup)
+            except Exception as e:
+                print(f"❌ Telethon error: {e}")
+
+        await send_to_bot2()
+
+    except Exception as e:
+        print(f"❌ Handler error: {e}")
 
 # --------------------------
 # MAIN RUN
@@ -120,8 +128,10 @@ async def main():
     # تشغيل Flask في Thread مع البورت من البيئة (Koyeb)
     port = int(os.environ.get("PORT", 8000))
     threading.Thread(target=lambda: app.run(host="0.0.0.0", port=port), daemon=True).start()
+    print(f"🌐 Flask running on port {port}")
 
-    # تشغيل Polling
+    # تشغيل Bot polling
+    print("🔄 Bot polling started...")
     await application.run_polling()
     conn.close()
 
