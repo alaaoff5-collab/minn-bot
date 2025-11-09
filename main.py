@@ -6,6 +6,7 @@ from telethon import TelegramClient
 from telethon.sessions import StringSession
 from telegram import Update, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import ApplicationBuilder, MessageHandler, filters, ContextTypes
+import os  # لإحضار البورت من البيئة
 
 # --------------------------
 # CONFIG
@@ -49,7 +50,7 @@ else:
 # --------------------------
 # FLASK
 # --------------------------
-app = Flask(__name__)
+app = Flask(_name_)
 
 @app.route('/')
 def home():
@@ -116,12 +117,13 @@ async def main():
     application = ApplicationBuilder().token(BOT_TOKEN).build()
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
-    # تشغيل Flask في Thread
-    threading.Thread(target=lambda: app.run(host="0.0.0.0", port=8000)).start()
+    # تشغيل Flask في Thread مع البورت من البيئة (Koyeb)
+    port = int(os.environ.get("PORT", 8000))
+    threading.Thread(target=lambda: app.run(host="0.0.0.0", port=port), daemon=True).start()
 
     # تشغيل Polling
     await application.run_polling()
     conn.close()
 
-if __name__ == "__main__":
+if _name_ == "_main_":
     asyncio.run(main())
